@@ -1,0 +1,191 @@
+# main.py
+import pygame
+import sys
+import random
+from mouse import Mouse
+from deer import Deer
+
+# Initialize Pygame
+pygame.init()
+
+# Screen dimensions
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+SCREEN = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Tiny Trails: Deer Dash")
+
+# Colors
+MEADOW_GREEN = (152, 251, 152)
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+
+# Game variables
+score = 0
+game_time = 60  # seconds
+start_time = pygame.time.get_ticks() # Milliseconds since pygame.init()
+game_over = False
+
+# Player mouse
+player_mouse = Mouse(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+
+# Deer group
+deer_group = pygame.sprite.Group()
+for _ in range(5):
+    deer_group.add(Deer(random.randint(0, SCREEN_WIDTH - 60), random.randint(0, SCREEN_HEIGHT - 60)))
+
+# Font for score and timer
+font = pygame.font.Font(None, 36)
+
+# Game loop
+running = True
+clock = pygame.time.Clock() # For controlling frame rate
+
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        player_mouse.handle_input(event) # Pass events to mouse class
+
+    if not game_over:
+        # Update game logic
+        player_mouse.update(SCREEN_WIDTH, SCREEN_HEIGHT)
+        deer_group.update(SCREEN_WIDTH, SCREEN_HEIGHT)
+
+        # Check for collisions
+        collided_deer = pygame.sprite.spritecollide(player_mouse, deer_group, False)
+        for deer in collided_deer:
+            if not deer.tagged: # Only score if not already tagged
+                score += 1
+                deer.tag() # Set tagged state and start its "boop" animation/timer
+
+        # Update timer
+        elapsed_time = (pygame.time.get_ticks() - start_time) // 1000
+        remaining_time = game_time - elapsed_time
+        if remaining_time <= 0:
+            game_over = True
+            remaining_time = 0 # Ensure it doesn't go negative
+
+    # Drawing
+    SCREEN.fill(MEADOW_GREEN)
+
+    player_mouse.draw(SCREEN)
+    deer_group.draw(SCREEN)
+
+    # Draw score
+    score_text = font.render(f"Score: {score}", True, BLACK)
+    SCREEN.blit(score_text, (10, 10))
+
+    # Draw timer
+    timer_text = font.render(f"Time: {remaining_time}", True, BLACK)
+    SCREEN.blit(timer_text, (SCREEN_WIDTH - timer_text.get_width() - 10, 10))
+
+    if game_over:
+        game_over_text = font.render(f"Game Over! Final Score: {score}", True, BLACK)
+        text_rect = game_over_text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+        SCREEN.blit(game_over_text, text_rect)
+
+    pygame.display.flip() # Update the full display Surface to the screen
+    clock.tick(60) # Limit to 60 FPS
+
+pygame.quit()
+sys.exit()
+
+# mouse.py (simplified)
+import pygame
+
+class Mouse(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.Surface([30, 30])
+        self.image.fill((128, 128, 128)) # Gray color for mouse
+        self.rect = self.image.get_rect(center=(x, y))
+        self.speed = 7
+        self.change_x = 0
+        self.change_y = 0
+
+    def handle_input(self, event):
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT or event.key == pygame.K_a:
+                self.change_x = -self.speed
+            if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
+                self.change_x = self.speed
+            if event.key == pygame.K_UP or event.key == pygame.K_w:
+                self.change_y = -self.speed
+            if event.key == pygame.K_DOWN or event.key == pygame.K_s:
+                self.change_y = self.speed
+        elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_LEFT or event.key == pygame.K_a:
+                self.change_x = 0
+            if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
+                self.change_x = 0
+            if event.key == pygame.K_UP or event.key == pygame.K_w:
+                self.change_y = 0
+            if event.key == pygame.K_DOWN or event.key == pygame.K_s:
+                self.change_y = 0
+
+    def update(self, screen_width, screen_height):
+        self.rect.x += self.change_x
+        self.rect.y += self.change_y
+
+        # Keep mouse on screen
+        if self.rect.left < 0:
+            self.rect.left = 0
+        if self.rect.right > screen_width:
+            self.rect.right = screen_width
+        if self.rect.top < 0:
+            self.rect.top = 0
+        if self.rect.bottom > screen_height:
+            self.rect.bottom = screen_height
+
+    def draw(self, surface):
+        surface.blit(self.image, self.rect)
+
+
+# deer.py (simplified)
+import pygame
+import random
+
+class Deer(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.Surface([60, 60])
+        self.image.fill((160, 82, 45)) # Brown color for deer
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.speed = 2
+        self.change_x = random.choice([-1, 1]) * self.speed
+        self.change_y = random.choice([-1, 1]) * self.speed
+        self.tagged = False
+        self.tag_timer = 0
+        self.tag_duration = 500 # milliseconds
+
+    def update(self, screen_width, screen_height):
+        self.rect.x += self.change_x
+        self.rect.y += self.change_y
+
+        # Bounce off walls
+        if self.rect.left < 0 or self.rect.right > screen_width:
+            self.change_x *= -1
+            self.rect.x += self.change_x # Move it off the wall
+        if self.rect.top < 0 or self.rect.bottom > screen_height:
+            self.change_y *= -1
+            self.rect.y += self.change_y # Move it off the wall
+
+        # Handle tagged state
+        if self.tagged:
+            if pygame.time.get_ticks() - self.tag_timer > self.tag_duration:
+                self.tagged = False
+                # Optionally randomize direction after being untagged
+                self.change_x = random.choice([-1, 1]) * self.speed
+                self.change_y = random.choice([-1, 1]) * self.speed
+
+
+    def tag(self):
+        self.tagged = True
+        self.tag_timer = pygame.time.get_ticks()
+        # Visual effect: e.g., momentarily change color or sprite
+        # self.image.fill((255, 0, 0)) # Red when tagged
+        # Or play a sound: pygame.mixer.Sound('boop.wav').play()
+
+    def draw(self, surface):
+        # If you had different sprites for tagged/untagged, you'd switch them here
+        surface.blit(self.image, self.rect)
