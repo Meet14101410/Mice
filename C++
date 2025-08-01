@@ -1,0 +1,105 @@
+// main.cpp
+#include <SFML/Graphics.hpp>
+#include <vector>
+#include "Mouse.hpp"
+#include "Deer.hpp"
+
+int main() {
+    sf::RenderWindow window(sf::VideoMode(800, 600), "Tiny Trails: Deer Dash");
+    window.setFramerateLimit(60);
+
+    Mouse playerMouse(400, 300); // Initial position
+    std::vector<Deer> deerList;
+    for (int i = 0; i < 5; ++i) {
+        deerList.emplace_back(rand() % 700, rand() % 500); // Random positions
+    }
+
+    sf::Clock clock; // For delta time
+    sf::Time gameTime = sf::seconds(60.0f); // 60 seconds game time
+    sf::Clock gameClock; // For game countdown
+
+    int score = 0;
+    sf::Font font;
+    // Load font and set up text for score and timer
+
+    while (window.isOpen()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
+                window.close();
+            // Handle keyboard input (Mouse movement)
+        }
+
+        sf::Time deltaTime = clock.restart(); // Get time since last frame
+
+        // Update game logic (only if gameTime > 0)
+        if (gameTime.asSeconds() > 0) {
+            gameTime -= gameClock.restart(); // Update remaining time
+
+            playerMouse.update(deltaTime.asSeconds()); // Update mouse position based on input
+
+            for (auto& deer : deerList) {
+                deer.update(deltaTime.asSeconds()); // Update deer position (random movement)
+                deer.handleBounds(window.getSize().x, window.getSize().y); // Bounce off walls
+
+                if (!deer.isTagged() && playerMouse.collidesWith(deer)) {
+                    score++;
+                    deer.tag(); // Set tagged, maybe play a sound/animation
+                    // Reset tagged state after a delay (can use a timer in Deer class)
+                }
+            }
+        } else {
+            // Game over logic
+        }
+
+        window.clear(sf::Color(152, 251, 152)); // Clear with meadow green
+
+        // Draw everything
+        playerMouse.draw(window);
+        for (const auto& deer : deerList) {
+            deer.draw(window);
+        }
+        // Draw score and timer text
+
+        window.display();
+    }
+    return 0;
+}
+
+// Mouse.hpp (simplified)
+#include <SFML/Graphics.hpp>
+
+class Mouse {
+public:
+    Mouse(float x, float y);
+    void update(float dt); // dt = delta time
+    void draw(sf::RenderWindow& window);
+    bool collidesWith(const Deer& deer) const; // AABB collision
+    // Getters for position, bounds
+
+private:
+    sf::CircleShape shape; // Or sf::Sprite for textured character
+    float speed;
+    // Input state variables (e.g., bool movingUp;)
+};
+
+// Deer.hpp (simplified)
+#include <SFML/Graphics.hpp>
+
+class Deer {
+public:
+    Deer(float x, float y);
+    void update(float dt);
+    void draw(sf::RenderWindow& window);
+    void handleBounds(unsigned int screenWidth, unsigned int screenHeight);
+    bool isTagged() const;
+    void tag(); // Sets tagged flag, starts timer to reset it
+    // Getters for position, bounds
+
+private:
+    sf::RectangleShape shape; // Or sf::Sprite for textured character
+    float vx, vy;
+    bool tagged;
+    sf::Clock tagTimer; // For temporary tagged state
+    const float tagDuration = 0.5f;
+};
