@@ -1,0 +1,150 @@
+// Main game class
+public class TinyTrailsGame {
+    public static void main(String[] args) {
+        JFrame frame = new JFrame("Tiny Trails: Deer Dash");
+        GamePanel gamePanel = new GamePanel();
+        frame.add(gamePanel);
+        frame.pack(); // Adjust frame size to panel's preferred size
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setVisible(true);
+        gamePanel.startGameLoop(); // Start the game loop
+    }
+}
+
+// GamePanel.java
+class GamePanel extends JPanel implements ActionListener, KeyListener {
+    private Mouse playerMouse;
+    private List<Deer> deerList;
+    private Timer gameTimer; // Swing Timer
+    private int score;
+    private int timeLeft;
+
+    public GamePanel() {
+        setPreferredSize(new Dimension(800, 600));
+        setBackground(new Color(152, 251, 152)); // Pale green
+        setFocusable(true);
+        addKeyListener(this);
+        playerMouse = new Mouse(getWidth() / 2, getHeight() / 2);
+        deerList = new ArrayList<>();
+        // Initialize deer here
+        for (int i = 0; i < 5; i++) {
+            deerList.add(new Deer(Math.random() * getWidth(), Math.random() * getHeight()));
+        }
+        score = 0;
+        timeLeft = 60;
+    }
+
+    public void startGameLoop() {
+        gameTimer = new Timer(16, this); // ~60 FPS
+        gameTimer.start();
+        // Start a separate timer for countdown
+        new Timer(1000, e -> {
+            timeLeft--;
+            if (timeLeft <= 0) {
+                ((Timer)e.getSource()).stop();
+                gameTimer.stop();
+                // Show game over message
+            }
+            repaint(); // To update timer display
+        }).start();
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        // Draw mouse
+        g.setColor(Color.GRAY);
+        g.fillOval((int) playerMouse.getX(), (int) playerMouse.getY(), playerMouse.getSize(), playerMouse.getSize());
+
+        // Draw deer
+        g.setColor(new Color(160, 82, 45)); // Brown
+        for (Deer deer : deerList) {
+            g.fillRect((int) deer.getX(), (int) deer.getY(), deer.getSize(), deer.getSize());
+        }
+
+        // Draw score and timer
+        g.setColor(Color.BLACK);
+        g.drawString("Score: " + score, 10, 20);
+        g.drawString("Time: " + timeLeft, getWidth() - 70, 20);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        // Game logic updates here (called by gameTimer)
+        playerMouse.move(); // Based on key presses
+        for (Deer deer : deerList) {
+            deer.move(); // Random movement
+            // Basic boundary checks for deer
+            if (deer.getX() <= 0 || deer.getX() >= getWidth() - deer.getSize()) deer.reverseX();
+            if (deer.getY() <= 0 || deer.getY() >= getHeight() - deer.getSize()) deer.reverseY();
+
+            // Collision detection
+            if (!deer.isTagged() && playerMouse.collidesWith(deer)) {
+                score++;
+                deer.tag(); // Set tagged true temporarily
+                // Add visual effect (e.g., change color briefly, jump)
+                // This would be more complex, likely involving a state in Deer class
+            }
+        }
+        repaint(); // Redraw everything
+    }
+
+    // KeyListener methods for playerMouse movement (update playerMouse's velocity/direction)
+    @Override
+    public void keyPressed(KeyEvent e) { /* ... set mouse direction ... */ }
+    @Override
+    public void keyReleased(KeyEvent e) { /* ... reset mouse direction ... */ }
+    @Override
+    public void keyTyped(KeyEvent e) {}
+}
+
+// Mouse.java (simplified)
+class Mouse {
+    private double x, y;
+    private int size = 30;
+    private double speed = 5;
+    private boolean movingUp, movingDown, movingLeft, movingRight;
+
+    public Mouse(double x, double y) { this.x = x; this.y = y; }
+    public void setMoving(int dir, boolean val) { /* ... logic for setting moving flags ... */ }
+    public void move() {
+        if (movingUp) y -= speed;
+        if (movingDown) y += speed;
+        if (movingLeft) x -= speed;
+        if (movingRight) x += speed;
+        // Clamp x, y to stay within bounds
+    }
+    public boolean collidesWith(Deer deer) {
+        // AABB collision logic using x, y, size
+        return (x < deer.getX() + deer.getSize() &&
+                x + size > deer.getX() &&
+                y < deer.getY() + deer.getSize() &&
+                y + size > deer.getY());
+    }
+    // Getters for x, y, size
+}
+
+// Deer.java (simplified)
+class Deer {
+    private double x, y;
+    private int size = 60;
+    private double vx, vy;
+    private boolean tagged;
+
+    public Deer(double x, double y) {
+        this.x = x; this.y = y;
+        this.vx = (Math.random() - 0.5) * 2; // Random initial velocity
+        this.vy = (Math.random() - 0.5) * 2;
+        this.tagged = false;
+    }
+    public void move() { x += vx; y += vy; }
+    public void reverseX() { vx *= -1; }
+    public void reverseY() { vy *= -1; }
+    public boolean isTagged() { return tagged; }
+    public void tag() {
+        tagged = true;
+        // Logic for boop effect, e.g., temporary speed boost/reversal
+        // Reset tagged after a delay (e.g., using another Timer)
+    }
+    // Getters for x, y, size
+}
