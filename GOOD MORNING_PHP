@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Good Morning News!</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            padding: 30px 40px;
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 15px;
+        }
+        h2 {
+            color: #34495e;
+            font-size: 1.8em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        p {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        li {
+            background-color: #ecf0f1;
+            margin-bottom: 8px;
+            padding: 12px 15px;
+            border-radius: 8px;
+            text-align: left;
+            font-size: 1.05em;
+            border-left: 5px solid #3498db;
+        }
+        li a {
+            text-decoration: none;
+            color: #2980b9;
+            font-weight: bold;
+        }
+        li a:hover {
+            color: #1a5276;
+            text-decoration: underline;
+        }
+        .weather-info, .quote-info {
+            background-color: #e8f6f6;
+            border: 1px solid #d1eded;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 1.1em;
+            color: #2c3e50;
+        }
+        .timestamp {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-top: 25px;
+            border-top: 1px dashed #ccc;
+            padding-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Good Morning!</h1>
+
+        <?php
+            // Set the timezone to India Standard Time (IST)
+            date_default_timezone_set('Asia/Kolkata');
+
+            // Get the current date and time
+            $current_date_time = date("l, F j, Y - h:i A");
+            $current_hour = date("H"); // 24-hour format
+
+            // Determine greeting based on time of day
+            $greeting = "";
+            if ($current_hour >= 5 && $current_hour < 12) {
+                $greeting = "Rise and shine! It's a beautiful morning.";
+            } elseif ($current_hour >= 12 && $current_hour < 18) {
+                $greeting = "Good Afternoon! Hope your day is going well.";
+            } elseif ($current_hour >= 18 || $current_hour < 5) {
+                $greeting = "Good Evening! Time to wind down or plan for tomorrow.";
+            }
+        ?>
+
+        <p><?php echo $greeting; ?></p>
+        <p>Today is: <strong><?php echo $current_date_time; ?></strong></p>
+
+        ---
+
+        <h2>Top Headlines</h2>
+        <ul>
+            <?php
+                // In a real application, you would fetch these from a News API
+                // Example: using file_get_contents or cURL to fetch from an API like NewsAPI.org or Google News RSS
+                // For this example, we'll use static placeholders.
+
+                $headlines = [
+                    ['title' => 'Local Elections See High Voter Turnout', 'link' => '#'],
+                    ['title' => 'New Tech Startup Launches in Rajkot', 'link' => '#'],
+                    ['title' => 'Monsoon Rains Bring Relief Across Gujarat', 'link' => '#'],
+                    ['title' => 'Cultural Festival Announced for Next Month', 'link' => '#'],
+                ];
+
+                foreach ($headlines as $headline) {
+                    echo '<li><a href="' . htmlspecialchars($headline['link']) . '" target="_blank">' . htmlspecialchars($headline['title']) . '</a></li>';
+                }
+            ?>
+        </ul>
+
+        ---
+
+        <h2>Your Local Weather</h2>
+        <div class="weather-info">
+            <?php
+                // In a real application, you'd use a Weather API (e.g., OpenWeatherMap, AccuWeather)
+                // You'd make an API call using file_get_contents or cURL with your API key and location.
+                // For this example, we'll use static placeholders for Rajkot.
+
+                $location = "Rajkot, Gujarat";
+                $temperature = "28°C";
+                $conditions = "Partly Cloudy";
+                $humidity = "75%";
+                $wind = "10 km/h NW";
+            ?>
+            <p><strong>Location:</strong> <?php echo $location; ?></p>
+            <p><strong>Temperature:</strong> <?php echo $temperature; ?></p>
+            <p><strong>Conditions:</strong> <?php echo $conditions; ?></p>
+            <p><strong>Humidity:</strong> <?php echo $humidity; ?></p>
+            <p><strong>Wind:</strong> <?php echo $wind; ?></p>
+        </div>
+
+        ---
+
+        <h2>Thought for the Day</h2>
+        <div class="quote-info">
+            <?php
+                // You could fetch a random quote from a Quote API or a local database
+                $quote = "The best way to predict the future is to create it.";
+                $author = "Peter Drucker";
+            ?>
+            <p>"<?php echo htmlspecialchars($quote); ?>"</p>
+            <p><em>- <?php echo htmlspecialchars($author); ?></em></p>
+        </div>
+
+        <p class="timestamp">
+            Page generated on: <?php echo date("F j, Y, g:i a"); ?>
+        </p>
+    </div>
+</body>
+</html>
