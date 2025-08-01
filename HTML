@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tiny Trails: Deer Dash</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f8ff; /* Light blue background */
+            font-family: 'Comic Sans MS', cursive, sans-serif; /* Playful font */
+        }
+        #game-container {
+            width: 800px; /* Game area width */
+            height: 600px; /* Game area height */
+            border: 5px solid #4CAF50; /* Green border for meadow */
+            background-color: #98FB98; /* Pale green meadow */
+            position: relative;
+            overflow: hidden; /* Keep characters within bounds */
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+        }
+        .game-character {
+            position: absolute;
+            background-size: contain;
+            background-repeat: no-repeat;
+            image-rendering: pixelated; /* Good for pixel art */
+        }
+        #mouse {
+            width: 30px; /* Smaller for a mouse */
+            height: 30px;
+            background-image: url('https://via.placeholder.com/30/808080/FFFFFF?text=M'); /* Placeholder for mouse sprite */
+            border-radius: 50%; /* Round mouse */
+        }
+        .deer {
+            width: 60px; /* Larger for deer */
+            height: 60px;
+            background-image: url('https://via.placeholder.com/60/A0522D/FFFFFF?text=D'); /* Placeholder for deer sprite */
+            border-radius: 10%; /* Slightly rounded deer */
+        }
+        #score-board, #timer {
+            position: absolute;
+            top: 10px;
+            padding: 8px 15px;
+            background-color: rgba(255, 255, 255, 0.85);
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #333;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        #score-board { left: 10px; }
+        #timer { right: 10px; }
+
+        #game-messages {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.8em;
+            text-align: center;
+            z-index: 10; /* Make sure it's on top */
+        }
+        #game-messages h2 {
+            margin-bottom: 10px;
+            color: #FFD700; /* Gold color for title */
+        }
+        #game-messages p {
+            font-size: 0.7em;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 12px 25px;
+            font-size: 1.3em;
+            cursor: pointer;
+            background-color: #4CAF50; /* Green button */
+            color: white;
+            border: none;
+            border-radius: 8px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="score-board">Score: 0</div>
+        <div id="timer">Time: 60</div>
+
+        <div id="mouse" class="game-character"></div>
+
+        <div class="deer game-character" style="left: 150px; top: 100px;"></div>
+        <div class="deer game-character" style="left: 400px; top: 250px;"></div>
+        <div class="deer game-character" style="left: 600px; top: 50px;"></div>
+        <div class="deer game-character" style="left: 250px; top: 400px;"></div>
+
+
+        <div id="game-messages">
+            <h2>Tiny Trails: Deer Dash!</h2>
+            <p>Help the mischievous mouse boop the deer.<br>Use arrow keys to move!</p>
+            <button id="start-button">Start Game</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const gameContainer = document.getElementById('game-container');
+            const mouse = document.getElementById('mouse');
+            const scoreBoard = document.getElementById('score-board');
+            const timerDisplay = document.getElementById('timer');
+            const gameMessages = document.getElementById('game-messages');
+            const startButton = document.getElementById('start-button');
+
+            let mouseX = 50;
+            let mouseY = 50;
+            const mouseSpeed = 7; // Pixels per frame
+            const deerSpeed = 2; // Pixels per frame for deer
+            const numDeer = 5;
+            let score = 0;
+            let timeLeft = 60; // seconds
+            let gameRunning = false;
+            let gameInterval; // For the main game loop
+            let timerInterval; // For the countdown timer
+
+            const deerArray = []; // To store deer elements and their properties
+
+            // Initialize mouse position
+            mouse.style.left = `${mouseX}px`;
+            mouse.style.top = `${mouseY}px`;
+
+            // Function to create a new deer
+            function createDeer() {
+                const deer = document.createElement('div');
+                deer.classList.add('deer', 'game-character');
+                deer.x = Math.random() * (gameContainer.clientWidth - deer.offsetWidth);
+                deer.y = Math.random() * (gameContainer.clientHeight - deer.offsetHeight);
+                deer.vx = (Math.random() - 0.5) * deerSpeed * 2; // Random initial velocity
+                deer.vy = (Math.random() - 0.5) * deerSpeed * 2;
+                deer.style.left = `${deer.x}px`;
+                deer.style.top = `${deer.y}px`;
+                gameContainer.appendChild(deer);
+                deerArray.push(deer);
+            }
+
+            // Populate initial deer (remove placeholder HTML deer if doing this dynamically)
+            // For now, let's keep the HTML placeholders for simplicity if not fully dynamic
+            document.querySelectorAll('.deer').forEach(deerElement => {
+                deerArray.push({
+                    element: deerElement,
+                    x: parseFloat(deerElement.style.left),
+                    y: parseFloat(deerElement.style.top),
+                    vx: (Math.random() - 0.5) * deerSpeed * 2,
+                    vy: (Math.random() - 0.5) * deerSpeed * 2,
+                    tagged: false // To prevent multiple scores from one tag
+                });
+            });
+
+
+            function startGame() {
+                score = 0;
+                timeLeft = 60;
+                scoreBoard.textContent = `Score: ${score}`;
+                timerDisplay.textContent = `Time: ${timeLeft}`;
+                gameMessages.style.display = 'none';
+                gameRunning = true;
+
+                // Reset mouse position
+                mouseX = gameContainer.clientWidth / 2 - mouse.offsetWidth / 2;
+                mouseY = gameContainer.clientHeight / 2 - mouse.offsetHeight / 2;
+                mouse.style.left = `${mouseX}px`;
+                mouse.style.top = `${mouseY}px`;
+
+                // Reset deer positions and states (if dynamically created)
+                deerArray.forEach(deer => {
+                    deer.x = Math.random() * (gameContainer.clientWidth - deer.element.offsetWidth);
+                    deer.y = Math.random() * (gameContainer.clientHeight - deer.element.offsetHeight);
+                    deer.element.style.left = `${deer.x}px`;
+                    deer.element.style.top = `${deer.y}px`;
+                    deer.tagged = false; // Reset tag status
+                });
+
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    timerDisplay.textContent = `Time: ${timeLeft}`;
+                    if (timeLeft <= 0) {
+                        endGame();
+                    }
+                }, 1000); // Update timer every second
+
+                gameInterval = requestAnimationFrame(gameLoop); // Start the main game loop
+            }
+
+            function endGame() {
+                gameRunning = false;
+                cancelAnimationFrame(gameInterval); // Stop game loop
+                clearInterval(timerInterval); // Stop timer
+                gameMessages.style.display = 'flex';
+                gameMessages.innerHTML = `<h2>Game Over!</h2><p>You tagged ${score} deer!</p><button id="restart-button">Play Again?</button>`;
+                document.getElementById('restart-button').addEventListener('click', startGame);
+            }
+
+            // Keyboard input handling
+            const keys = {};
+            document.addEventListener('keydown', (e) => {
+                keys[e.key] = true;
+            });
+            document.addEventListener('keyup', (e) => {
+                keys[e.key] = false;
+            });
+
+            // Collision detection (Axis-Aligned Bounding Box - AABB)
+            function checkCollision(obj1, obj2) {
+                const rect1 = obj1.getBoundingClientRect();
+                const rect2 = obj2.getBoundingClientRect();
+
+                return rect1.left < rect2.right &&
+                       rect1.right > rect2.left &&
+                       rect1.top < rect2.bottom &&
+                       rect1.bottom > rect2.top;
+            }
+
+            // Main game loop
+            function gameLoop() {
+                if (!gameRunning) return;
+
+                // 1. Move Mouse
+                if (keys['ArrowUp'] || keys['w']) mouseY = Math.max(0, mouseY - mouseSpeed);
+                if (keys['ArrowDown'] || keys['s']) mouseY = Math.min(gameContainer.clientHeight - mouse.offsetHeight, mouseY + mouseSpeed);
+                if (keys['ArrowLeft'] || keys['a']) mouseX = Math.max(0, mouseX - mouseSpeed);
+                if (keys['ArrowRight'] || keys['d']) mouseX = Math.min(gameContainer.clientWidth - mouse.offsetWidth, mouseX + mouseSpeed);
+
+                mouse.style.left = `${mouseX}px`;
+                mouse.style.top = `${mouseY}px`;
+
+                // 2. Move Deer and check collisions
+                deerArray.forEach(deer => {
+                    // Update deer position based on its velocity
+                    deer.x += deer.vx;
+                    deer.y += deer.vy;
+
+                    // Simple boundary collision for deer
+                    if (deer.x <= 0 || deer.x >= gameContainer.clientWidth - deer.element.offsetWidth) {
+                        deer.vx *= -1; // Reverse horizontal direction
+                    }
+                    if (deer.y <= 0 || deer.y >= gameContainer.clientHeight - deer.element.offsetHeight) {
+                        deer.vy *= -1; // Reverse vertical direction
+                    }
+
+                    deer.element.style.left = `${deer.x}px`;
+                    deer.element.style.top = `${deer.y}px`;
+
+                    // Check for collision with mouse
+                    if (!deer.tagged && checkCollision(mouse, deer.element)) {
+                        score++;
+                        scoreBoard.textContent = `Score: ${score}`;
+                        deer.tagged = true; // Mark as tagged
+                        // Add a visual "boop" effect (e.g., temporary scale or rotation)
+                        deer.element.style.transition = 'transform 0.2s ease-out';
+                        deer.element.style.transform = 'scale(1.2) rotate(30deg)'; // Example
+                        setTimeout(() => {
+                            deer.element.style.transform = 'none'; // Reset after a short delay
+                            deer.element.style.transition = 'none';
+                            // After a short delay, make it taggable again and randomize its next movement
+                             deer.tagged = false; // Make taggable again
+                             deer.vx = (Math.random() - 0.5) * deerSpeed * 2;
+                             deer.vy = (Math.random() - 0.5) * deerSpeed * 2;
+                        }, 500); // Boop effect lasts 0.5 seconds
+                        
+                        // Optionally, play a sound
+                        // new Audio('boop.mp3').play();
+                    }
+                });
+
+                requestAnimationFrame(gameLoop); // Continue the loop
+            }
+
+            startButton.addEventListener('click', startGame);
+        });
+    </script>
+</body>
+</html>
